@@ -1,8 +1,15 @@
 {
-  "active": "my-claude",
+  "active": "bigmodel",
   "providers": [
     {
-      "id": "my-claude",
+      "id": "bigmodel",
+      "type": "openai-compat",
+      "apiKey": "REPLACE-ME",
+      "model": "glm-4.5v",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4"
+    },
+    {
+      "id": "anthropic",
       "type": "claude-native",
       "apiKey": "sk-ant-REPLACE-ME",
       "model": "claude-opus-4-6",

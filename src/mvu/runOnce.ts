@@ -13,6 +13,7 @@ import screenshot from "screenshot-desktop";
 import sharp from "sharp";
 
 import { ClaudeNativeProvider } from "../llm/claudeNative.js";
+import { OpenAiCompatProvider } from "../llm/openaiCompat.js";
 import { buildPrompt } from "../llm/promptBuilder.js";
 import type { LLMProvider, ProviderConfig } from "../llm/provider.js";
 
@@ -54,7 +55,7 @@ function buildProvider(cfg: ConfigFile): LLMProvider {
     case "claude-native":
       return new ClaudeNativeProvider(active);
     case "openai-compat":
-      throw new Error("[mvu] openai-compat provider not implemented yet (out of MVU scope)");
+      return new OpenAiCompatProvider(active);
     default:
       throw new Error(`[mvu] unknown provider type: ${(active as ProviderConfig).type}`);
   }
