@@ -1,5 +1,17 @@
 # 阶段 6：验证
 
+> ⚠️ **本阶段大部分子任务 blocked，等待 [`.docs/todo.md`](../.docs/todo.md) #1「跨平台构建与验证环境」决策落地。**
+>
+> **原因**：开发环境是 macOS host 上的 Linux 容器（aarch64 / linuxkit / 无 KVM），没有可信通路到真 Windows 桌面。已排除"容器 SSH 进 host VM"方案 —— 会破坏环境隔离。
+>
+> **当前可做的子集**（不依赖真 Windows）：
+> - 6.1 环境准备里的 `npm install` / typecheck 部分，可在容器内跑
+> - 6.6 LLM provider 切换的前半段（纯 API 调用，不依赖桌面行为）
+>
+> **必须等环境决策的子集**：6.2 / 6.3 / 6.4 / 6.5 / 6.7 全部 —— 这些都需要真实 Windows 桌面 + 托盘 + 浮窗 + 全局键鼠 hook。
+>
+> **解封触发条件**：`.docs/todo.md` #1 决策完成，且至少 1 台 Windows 构建机就位。
+
 ## 目标
 
 按照 `.docs/implementation_plan.md` 的"验证方式"逐项跑通，确认原型达到 demo 标准。发现问题就回到对应阶段修。
