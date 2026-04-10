@@ -1,0 +1,20 @@
+{
+  "name": "monitor-capture-verify",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Isolated verification of task 02 (capture layer)",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "smoke": "electron dist/main/smoke.js"
+  },
+  "dependencies": {
+    "@types/node": "^25.6.0",
+    "electron": "^41.2.0",
+    "get-windows": "^9.3.0",
+    "sharp": "^0.34.5",
+    "typescript": "^6.0.2",
+    "uiohook-napi": "^1.5.5"
+  }
+}
