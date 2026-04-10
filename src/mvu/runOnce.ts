@@ -22,6 +22,17 @@ const PROJECT_ROOT = resolve(__dirname, "../..");
 const CONFIG_PATH = resolve(PROJECT_ROOT, "config.json");
 const DEBUG_SCREENSHOT_PATH = resolve(PROJECT_ROOT, "mvu-debug-last.png");
 
+// 截图长边上限。
+//
+// 1280 在 4K 屏 (3840×2160) 上是 3× 下采样，地址栏 / 正文 / 代码这类小字号
+// 文字会被采样到 ~7px 高，vision LLM 普遍读不出来 — 实测 Claude 只能识别出
+// "这是 Chrome"，但具体页面内容会幻觉。
+//
+// 1920 是 4K 的 2× 下采样点，小字号文字保留到 ~12px 高，vision 模型能稳定
+// 读出页面文字。代价是图像 token 翻倍（~1230 → ~2770），单次调用成本
+// 仍可忽略。
+const MAX_EDGE_PX = 1920;
+
 interface ConfigFile {
   active: string;
   providers: ProviderConfig[];
@@ -68,11 +79,11 @@ async function captureAndCompress(): Promise<Buffer> {
 
   const longSide = Math.max(meta.width ?? 0, meta.height ?? 0);
   let compressed: Buffer;
-  if (longSide > 1280) {
+  if (longSide > MAX_EDGE_PX) {
     compressed = await sharp(raw)
       .resize({
-        width: meta.width! >= meta.height! ? 1280 : undefined,
-        height: meta.height! > meta.width! ? 1280 : undefined,
+        width: meta.width! >= meta.height! ? MAX_EDGE_PX : undefined,
+        height: meta.height! > meta.width! ? MAX_EDGE_PX : undefined,
         fit: "inside",
       })
       .png({ compressionLevel: 9 })
