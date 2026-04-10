@@ -27,6 +27,7 @@ export class OpenAiCompatProvider implements LLMProvider {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly baseUrl: string;
+  private readonly extraBody: Record<string, unknown>;
 
   constructor(config: ProviderConfig) {
     if (config.type !== "openai-compat") {
@@ -43,6 +44,7 @@ export class OpenAiCompatProvider implements LLMProvider {
     this.model = config.model;
     // strip 末尾 slash，下面手动拼 /chat/completions
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
+    this.extraBody = config.extraBody ?? {};
   }
 
   async chat(input: ChatInput): Promise<ChatResult> {
@@ -58,14 +60,18 @@ export class OpenAiCompatProvider implements LLMProvider {
           content: m.content.map(toOpenAiContent),
         })),
       ],
+      // provider-specific 额外字段（例如智谱 GLM-4.6V 需要的 thinking: enabled）。
+      // 放在最后展开，但不允许覆盖 model/messages/max_tokens 这些核心字段 —— 这里没做
+      // 显式拦截，依赖 config 写入方自觉。MVU 阶段单用户场景这点信任成本可接受。
+      ...this.extraBody,
     };
 
     const url = `${this.baseUrl}/chat/completions`;
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
     });
