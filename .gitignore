@@ -11,3 +11,4 @@ mvu-debug-*.png
 
 # Claude Code internals
 .claude/worktrees/
+.claude/*.local.json
