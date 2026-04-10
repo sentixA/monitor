@@ -70,7 +70,8 @@ src/main/capture/inputHook.ts
 
 ## 验证记录（worktree: `verify-task02-capture`，2026-04-10）
 
-> 在 `.claude/worktrees/verify-task02-capture/` 里搭了最小骨架并写了一遍 capture 层。环境：Linux ARM64 容器，无 X server。目标平台是 Windows，所以**真实 capture 行为只能在 Windows 上跑**。这里只能验证：装包、TS 编译、模块加载、降级路径。
+> 第一轮在 `.claude/worktrees/verify-task02-capture/` 里搭最小骨架 + 写实现，环境是 Linux ARM64 容器无 X server，只能做装包 / TS 编译 / 模块加载 / 降级路径。
+> **第二轮（2026-04-10 后续）**：用户在 Windows 上跑了 `npm run smoke`，三项跨平台空白补齐了，又多出 3 条新发现，见下方"Windows 实跑追加发现"。
 
 ### 验证项与结果
 
@@ -81,9 +82,9 @@ src/main/capture/inputHook.ts
 | `tsc --noEmit` | ✅ | 见下方"必踩坑"修过几处 |
 | 模块加载（脱离 Electron 进程，纯 Node `require`）| ✅ | `screenCapturer` / `windowWatcher` / `inputHook` 都能 `require`，不会爆炸 |
 | `createInputHook()` 降级路径 | ✅ | linux-arm64 prebuild 加载失败 → 自动落到 `NoopInputHook`，warn 一行 |
-| 实际 `desktopCapturer.getSources()` 调用 | ⏭ | 容器无 X，跑 electron 直接 `Missing X server or $DISPLAY` SIGSEGV，必须在 Windows 上验 |
-| 实际 `get-windows.activeWindow()` 调用 | ⏭ | 同上，需要桌面会话 |
-| 实际 uiohook 键鼠事件 | ⏭ | 同上 + native binding 问题 |
+| 实际 `desktopCapturer.getSources()` 调用 | ✅ | Windows 实跑：返回 ~927 KB PNG，header `89504e470d0a1a0a` 正确 |
+| 实际 `get-windows.activeWindow()` 调用 | ✅ | Windows 实跑：返回 `{app, title, pid}`，但有 Terminal host 陷阱 → 见 9 |
+| 实际 uiohook 键鼠事件 | ✅ | Windows 实跑：`isAvailable=true`，`start()` / `stop()` 干净 |
 
 ### 必踩坑（直接抄就行）
 
@@ -123,6 +124,15 @@ src/main/capture/inputHook.ts
 8. **`new EventEmitter()` 强类型重载的 implementation signature**
    - 多个 `on(event, handler)` 重载 + 一个宽签名实现，宽签名的 handler 参数要用 `(...args: never[]) => void`，否则 TS2394 overload-not-compatible。
 
+9. **`get-windows` 在终端宿主里只能拿到 host 进程，不是内层 shell**（Windows 实跑发现）
+   - 实测在 Windows Terminal 里跑 `cmd.exe`，返回值是：
+     ```json
+     { "app": "Windows Terminal Host", "title": "C:\\Windows\\system32\\cmd.exe ", "pid": 33304 }
+     ```
+   - `owner.name` 拿到的是宿主进程（WindowsTerminal / OpenConsole），**不是用户视角的"我在用 cmd"**。VS Code 集成终端 / Hyper / Tabby 应该都有同样问题。
+   - **`title` 字段反而保留了真正的命令行**，所以下游 PromptBuilder 不能只看 `app`，必须 `app + title` 一起喂给 LLM，否则模型会以为用户在用一个 launcher。
+   - 不影响 watcher 接口形状，影响的是阶段 4 的 prompt 模板。先在这里记一笔。
+
 ### 推荐依赖版本（已在 worktree 验证可装）
 
 ```jsonc
@@ -154,10 +164,17 @@ src/main/capture/inputHook.ts
 
 合并方式建议：在 task01 完成后，把上面 4 个文件 cherry-pick 过来，再调 `tsconfig.json` 的 `moduleResolution` 即可。
 
-### 仍未验证（必须在 Windows 上做）
+### Windows 实跑追加发现（次要观察）
 
-- 真实截屏 buffer 大小、PNG header 正确性
-- HiDPI 屏 thumbnailSize 缩放是否清晰
+- **截图体积 ~927 KB**（长边 1280，sharp PNG compressionLevel 6）。对 vision LLM **计费没影响**（大多按分辨率算 token），但**上行延迟和总流量**不是零。如果嫌慢可以：
+  - 把 sharp 输出换成 JPEG q=80，预计 150–250 KB
+  - 或者把 `MAX_EDGE` 从 1280 降到 1024
+  - 当前先不动，等阶段 4 接入真 LLM 后看实际延迟再决定
+- **`DEP0169 url.parse DeprecationWarning`** 在 Electron 41 + Node 22 环境下出现，**不是我们的代码**，是依赖里调的（最可能是 `get-windows` 或 electron 内部某个早期模块）。Node 23/24 真删 `url.parse` 时这条会变 error，下次升 deps 时 grep 一下来源。
+
+### 仍未验证（剩余 Windows 检查项）
+
+- HiDPI 屏 thumbnailSize 缩放是否清晰（实跑机器是不是 HiDPI 未知）
 - `get-windows` 在 UAC 提权进程 / 系统进程为前台时是否还能拿到 owner.name
 - uiohook 全局 hook 在 Windows Defender / 杀软误杀情况
 - `Ctrl+C` 关闭 Electron 时 uiohook 是否能干净 stop（否则鼠标会卡死）
