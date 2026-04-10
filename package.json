@@ -1,0 +1,21 @@
+{
+  "name": "monitor",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Desktop AI Copilot prototype - watches screen and proactively suggests help",
+  "type": "module",
+  "scripts": {
+    "mvu": "tsx src/mvu/runOnce.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "screenshot-desktop": "^1.15.0",
+    "sharp": "^0.34.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/screenshot-desktop": "^1.12.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

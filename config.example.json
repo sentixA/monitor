@@ -1,0 +1,12 @@
+{
+  "active": "my-claude",
+  "providers": [
+    {
+      "id": "my-claude",
+      "type": "claude-native",
+      "apiKey": "sk-ant-REPLACE-ME",
+      "model": "claude-opus-4-6",
+      "baseUrl": "https://api.anthropic.com"
+    }
+  ]
+}

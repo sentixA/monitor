@@ -1,0 +1,13 @@
+node_modules/
+dist/
+out/
+*.log
+
+# Local config — contains real API keys, never commit
+config.json
+
+# MVU debug artifacts
+mvu-debug-*.png
+
+# Claude Code internals
+.claude/worktrees/
