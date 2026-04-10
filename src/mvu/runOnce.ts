@@ -13,6 +13,7 @@ import screenshot from "screenshot-desktop";
 import sharp from "sharp";
 
 import { ClaudeNativeProvider } from "../llm/claudeNative.js";
+import { OpenAiCompatProvider } from "../llm/openaiCompat.js";
 import { buildPrompt } from "../llm/promptBuilder.js";
 import type { LLMProvider, ProviderConfig } from "../llm/provider.js";
 
@@ -21,6 +22,20 @@ const __dirname = dirname(__filename);
 const PROJECT_ROOT = resolve(__dirname, "../..");
 const CONFIG_PATH = resolve(PROJECT_ROOT, "config.json");
 const DEBUG_SCREENSHOT_PATH = resolve(PROJECT_ROOT, "mvu-debug-last.png");
+
+// 截图长边上限。
+//
+// 1280 在 4K 屏 (3840×2160) 上是 3× 下采样，地址栏 / 正文 / 代码这类小字号
+// 文字会被采样到 ~7px 高，理论上 vision LLM 读不出来。
+//
+// 1920 是 4K 的 2× 下采样点，小字保留到 ~12px 高。代价是图像 token 翻倍
+// (~1230 → ~2770)，单次调用成本仍可忽略。
+//
+// 注意：这是个**预防性**取值，不是实测调出来的。本 PR 之前 MVU 一直跑不通，
+// 真正原因是 endpoint 整块丢图（见本 commit 另一半改动），不是分辨率。
+// PR 合并后建议在真实 vision endpoint 上对比 1280 vs 1920，如果 1280 够用
+// 可以再降回去省 token。
+const MAX_EDGE_PX = 1920;
 
 interface ConfigFile {
   active: string;
@@ -54,7 +69,7 @@ function buildProvider(cfg: ConfigFile): LLMProvider {
     case "claude-native":
       return new ClaudeNativeProvider(active);
     case "openai-compat":
-      throw new Error("[mvu] openai-compat provider not implemented yet (out of MVU scope)");
+      return new OpenAiCompatProvider(active);
     default:
       throw new Error(`[mvu] unknown provider type: ${(active as ProviderConfig).type}`);
   }
@@ -68,11 +83,11 @@ async function captureAndCompress(): Promise<Buffer> {
 
   const longSide = Math.max(meta.width ?? 0, meta.height ?? 0);
   let compressed: Buffer;
-  if (longSide > 1280) {
+  if (longSide > MAX_EDGE_PX) {
     compressed = await sharp(raw)
       .resize({
-        width: meta.width! >= meta.height! ? 1280 : undefined,
-        height: meta.height! > meta.width! ? 1280 : undefined,
+        width: meta.width! >= meta.height! ? MAX_EDGE_PX : undefined,
+        height: meta.height! > meta.width! ? MAX_EDGE_PX : undefined,
         fit: "inside",
       })
       .png({ compressionLevel: 9 })
