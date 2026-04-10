@@ -152,17 +152,18 @@ src/main/capture/inputHook.ts
 
 ### 参考实现位置
 
-可以直接拷过来的实现存在 worktree 分支 `verify-task02-capture` 下：
+参考实现没有合进 main（合并 PR 时去掉了，因为 main 的 MVU 走的是 `screenshot-desktop` 而不是 Electron 的 `desktopCapturer`，构建栈完全不同）。但代码本身存在 git 历史里，stage 2 真要做 capture 层时可以拉出来：
 
-```
-.claude/worktrees/verify-task02-capture/src/main/capture/
-├── types.ts            # 接口 + 事件类型
-├── screenCapturer.ts   # desktopCapturer + sharp
-├── windowWatcher.ts    # get-windows 动态 import
-└── inputHook.ts        # uiohook-napi + Noop 降级
+```bash
+# tag archive/task02-capture-reference 钉在 commit 6c96b91，
+# 即验证分支被 rebase 之前最后一个含 capture 实现的 commit
+git checkout archive/task02-capture-reference -- src/main/capture/
+# 4 个文件：types.ts / screenCapturer.ts / windowWatcher.ts / inputHook.ts
 ```
 
-合并方式建议：在 task01 完成后，把上面 4 个文件 cherry-pick 过来，再调 `tsconfig.json` 的 `moduleResolution` 即可。
+> 用 tag 而不是分支引用：分支会被删，但 tag 永久保留 commit。SHA `6c96b91` 是同一目标，tag 只是一个可读名字。
+
+**注意**：参考实现假定 Electron + CommonJS + TS 6 Node16 moduleResolution。如果 stage 2 接受 main 当前的 ESM + Bundler + TS 5.7 栈，需要把 `require('uiohook-napi')` 改成动态 `import()`，并把整个 capture 层重新 typecheck 一遍。这次验证的"必踩坑"小节里大部分语义还是有效的（接口形状、Terminal host 陷阱、prebuild bug 等都跟构建工具栈无关），但具体语法会有差别。
 
 ### Windows 实跑追加发现（次要观察）
 
