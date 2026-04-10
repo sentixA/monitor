@@ -53,4 +53,12 @@ export interface ProviderConfig {
   apiKey: string;
   model: string;
   baseUrl?: string;
+  /**
+   * Provider-specific 额外字段，会被合并进 request body 顶层。
+   * 用于声明非 OpenAI 标准但特定 provider 需要的字段，例如：
+   *   智谱 GLM-4.6V 需要 { "thinking": { "type": "enabled" } } 来启用 vision 推理
+   * 不同 provider 的字段不能互通，所以走 config 而不是硬编码。
+   * 当前只有 openai-compat provider 会读取它。
+   */
+  extraBody?: Record<string, unknown>;
 }
